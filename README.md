@@ -9,4 +9,21 @@ Hemingway mode will disable all keys that are involved in editing (cursor moveme
 
 The plugin adds a command `Hemingway Mode: Toggle active` which you can assign to a shortcut, to a button (using something like Commander) or you can just run using the command palette.
 
+Hemingway mode when active will add a thin colored line at the top of the editor to give visual feedback. That line can be styled using CSS variables:
+
+```css
+:root {
+  --hemingway-active-top-line-color: #c00;
+  --hemingway-active-top-line-width: 3px;
+}
+```
+
+If you want to remove such line, just use a width of zero in your theme or a snippet:
+
+```css
+:root {
+  --hemingway-active-top-line-width: 0;
+}
+```
+
 Enjoy your writing!
