@@ -62,7 +62,7 @@ export default class HemingwayModePlugin extends Plugin {
 		});
 	
 		await this.loadSettings();
-		setTimeout(async () => { await this.updateStatus(); }, 500);
+		setTimeout(async () => { await this.updateStatus(true); }, 500);
 	}
 
 	onunload() {
@@ -77,7 +77,7 @@ export default class HemingwayModePlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
-	async updateStatus() {
+	async updateStatus(quiet = false) {
 		if (this.settings.enabled) {
 			await this.installHemingwayKeymap();
 			await this.setupView();
@@ -86,7 +86,9 @@ export default class HemingwayModePlugin extends Plugin {
 			await this.uninstallHemingwayKeymap();
 			this.restoreView();
 		}
-		new Notice(`Hemingway mode ${this.settings.enabled ? 'active' : 'inactive'}`, 2000);
+		if (!quiet) {
+			new Notice(`Hemingway mode ${this.settings.enabled ? 'active' : 'inactive'}`, 2000);
+		}
 	}
 
 	async installHemingwayKeymap() {		
