@@ -1,3 +1,12 @@
-.view-content.hemingway .cm-editor .cm-content {
-	pointer-events: none;
+:root {
+  --hemingway-active-top-line-color: #c00;
+  --hemingway-active-top-line-width: 3px;
+}
+
+.view-content.hemingway .cm-editor {
+  border-top: var(--hemingway-active-top-line-width) solid var(--hemingway-active-top-line-color);
+
+  .cm-content {
+    pointer-events: none;
+  }
 }
