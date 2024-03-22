@@ -60,9 +60,12 @@ export default class HemingwayModePlugin extends Plugin {
 				await this.updateStatus();
 			}
 		});
-	
+
+		this.app.workspace.on('active-leaf-change', async () => {
+			await this.updateStatus(true);
+		});
+
 		await this.loadSettings();
-		setTimeout(async () => { await this.updateStatus(true); }, 500);
 	}
 
 	onunload() {
@@ -84,7 +87,7 @@ export default class HemingwayModePlugin extends Plugin {
 		}
 		else {
 			await this.uninstallHemingwayKeymap();
-			this.restoreView();
+			await this.restoreView();
 		}
 		if (!quiet) {
 			new Notice(`Hemingway mode ${this.settings.enabled ? 'active' : 'inactive'}`, 2000);
@@ -102,7 +105,7 @@ export default class HemingwayModePlugin extends Plugin {
 	async setupView() {
 		const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
 		if (markdownView) {
-			markdownView.editor.setCursor({line: 99999999, ch: 0});
+			markdownView.editor?.setCursor({line: 99999999, ch: 0});
 			markdownView.contentEl.addClass(HEMINGWAY_MODE_BODY_CLASS);
 			markdownView.contentEl.addEventListener('click', this.mouseEventListener.bind(this));
 		}		
@@ -118,7 +121,7 @@ export default class HemingwayModePlugin extends Plugin {
 
 	mouseEventListener(ev: MouseEvent) {
 		const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-		markdownView?.editor.focus();
+		markdownView?.editor?.focus();
 	}
 }
 
