@@ -10,3 +10,7 @@
     pointer-events: none;
   }
 }
+
+.view-content.hemingway.ptm-fullscreen-writing-focus-element .cm-editor {
+  border-top: none !important;
+}
