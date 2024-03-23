@@ -1,27 +1,19 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+MINIMUM_OBSIDIAN_VERSION="0.15.0"
 
-if [ "$#" -ne 1 ]; then
-    echo "Missing version number. Exiting."
-    exit 1
-fi
+set -euo pipefail
 
 if [[ $(git status --porcelain) ]]; then
   echo "Changes in the git repo. Exiting."
   exit 1
 fi
 
-NEW_VERSION=$1
-MINIMUM_OBSIDIAN_VERSION="0.15.0"
+npm version patch
+NEW_VERSION=$(jq ".version" package.json)
 
 echo "Updating to version ${NEW_VERSION}"
 echo "with minimum Obsidian version ${MINIMUM_OBSIDIAN_VERSION}"
-
-echo "Updating package.json"
-TEMP_FILE=$(mktemp)
-jq ".version |= \"${NEW_VERSION}\"" package.json > "$TEMP_FILE" || exit 1
-mv "$TEMP_FILE" package.json
 
 echo "Updating manifest.json"
 TEMP_FILE=$(mktemp)
