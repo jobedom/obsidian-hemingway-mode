@@ -10,6 +10,8 @@ fi
 npm version patch
 NEW_VERSION=$(jq ".version" package.json)
 
+exit 0
+
 echo "Adding ..."
 git add -A .
 echo "Committing ..."
