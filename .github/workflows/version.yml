@@ -24,21 +24,21 @@ jobs:
         github_token: ${{ secrets.PAT }}
     # update the manifest.json with the new version
     - name: Update manifest version
-      uses: gongstr/action-set-json-field@main
+      uses: jobedom/action-set-json-field@1.0.0
       with:
         file: manifest.json
         field: version
         value: ${{ steps.version.outputs.version }}
     # update the package.json with the new version
     - name: Update package version
-      uses: gongstr/action-set-json-field@main
+      uses: jobedom/action-set-json-field@1.0.0
       with:
         file: package.json
         field: version
         value: ${{ steps.version.outputs.version }}
     # update the versions.json with the new version
     - name: Update versions version
-      uses: gongstr/action-set-json-field@main
+      uses: jobedom/action-set-json-field@1.0.0
       with:
         file: versions.json
         field: ${{ steps.version.outputs.version }}
