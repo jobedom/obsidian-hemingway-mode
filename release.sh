@@ -10,8 +10,15 @@ fi
 npm version patch
 NEW_VERSION=$(jq ".version" package.json)
 
+echo "Adding ..."
 git add -A .
+echo "Committing ..."
 git commit -m "Update to version ${NEW_VERSION}"
+echo "Tagging ..."
 git tag "${NEW_VERSION}"
-git push
-git push origin --tags
+
+# echo "Pushing ..."
+# git push
+
+# echo "Pushing tags ..."
+# git push origin --tags
