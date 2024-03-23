@@ -12,6 +12,7 @@ import {
 
 interface HemingwayModePluginSettings {
   enabled: boolean;
+  allowBackspace: boolean;
   showToggleNotice: boolean;
   showTopLineWhenActive: boolean;
   topLineColor: string;
@@ -23,6 +24,7 @@ const DEFAULT_TOP_LINE_COLOR = "#cc0000";
 
 const DEFAULT_SETTINGS: HemingwayModePluginSettings = {
   enabled: false,
+  allowBackspace: false,
   showToggleNotice: true,
   showTopLineWhenActive: true,
   topLineColor: DEFAULT_TOP_LINE_COLOR,
@@ -34,40 +36,6 @@ export default class HemingwayModePlugin extends Plugin {
   keyMapScope: Scope;
 
   async onload() {
-    this.keyMapScope = new Scope(this.app.scope);
-    const nop = () => false;
-    const voidKeys = [
-      "ArrowLeft",
-      "ArrowRight",
-      "ArrowUp",
-      "ArrowDown",
-      "End",
-      "Home",
-      "PageUp",
-      "PageDown",
-      "Backspace",
-      "Delete",
-      "Clear",
-      "Cut",
-      "EraseEof",
-      "Redo",
-      "Undo",
-    ];
-    for (const key of voidKeys) {
-      this.keyMapScope.register([], key, nop);
-      this.keyMapScope.register(["Meta"], key, nop);
-      this.keyMapScope.register(["Alt"], key, nop);
-      this.keyMapScope.register(["Ctrl"], key, nop);
-      this.keyMapScope.register(["Shift"], key, nop);
-      this.keyMapScope.register(["Mod"], key, nop);
-      this.keyMapScope.register(["Meta", "Shift"], key, nop);
-      this.keyMapScope.register(["Alt", "Shift"], key, nop);
-      this.keyMapScope.register(["Ctrl", "Shift"], key, nop);
-      this.keyMapScope.register(["Shift", "Shift"], key, nop);
-      this.keyMapScope.register(["Mod", "Shift"], key, nop);
-    }
-    this.keyMapScope.register(["Meta"], "Z", nop);
-
     this.addSettingTab(new HemingwayModeSettingTab(this.app, this));
 
     this.addCommand({
@@ -85,6 +53,7 @@ export default class HemingwayModePlugin extends Plugin {
     });
 
     await this.loadSettings();
+    this.buildKeyMapScope(this.settings.allowBackspace);
   }
 
   async onunload() {
@@ -102,7 +71,50 @@ export default class HemingwayModePlugin extends Plugin {
     await this.saveData(this.settings);
   }
 
+  buildKeyMapScope(allowBackspace: boolean) {
+    this.keyMapScope = new Scope(this.app.scope);
+    const nop = () => false;
+    const voidKeys = [
+      "ArrowLeft",
+      "ArrowRight",
+      "ArrowUp",
+      "ArrowDown",
+      "End",
+      "Home",
+      "PageUp",
+      "PageDown",
+      "Delete",
+      "Clear",
+      "Cut",
+      "EraseEof",
+      "Redo",
+      "Undo",
+    ];
+
+    if (!allowBackspace) {
+      voidKeys.push("Backspace");
+    }
+
+    for (const key of voidKeys) {
+      this.keyMapScope.register([], key, nop);
+      this.keyMapScope.register(["Meta"], key, nop);
+      this.keyMapScope.register(["Alt"], key, nop);
+      this.keyMapScope.register(["Ctrl"], key, nop);
+      this.keyMapScope.register(["Shift"], key, nop);
+      this.keyMapScope.register(["Mod"], key, nop);
+      this.keyMapScope.register(["Meta", "Shift"], key, nop);
+      this.keyMapScope.register(["Alt", "Shift"], key, nop);
+      this.keyMapScope.register(["Ctrl", "Shift"], key, nop);
+      this.keyMapScope.register(["Shift", "Shift"], key, nop);
+      this.keyMapScope.register(["Mod", "Shift"], key, nop);
+    }
+
+    this.keyMapScope.register(["Meta"], "Z", nop);
+  }
+
   async updateStatus(quiet = false) {
+    this.buildKeyMapScope(this.settings.allowBackspace);
+
     const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
     markdownView?.contentEl.style.setProperty("--hemingway-active-top-line-color", this.settings.topLineColor);
     markdownView?.contentEl.style.setProperty("--hemingway-active-top-line-width", `${this.settings.topLineWidth}px`);
@@ -186,6 +198,17 @@ class HemingwayModeSettingTab extends PluginSettingTab {
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.showToggleNotice).onChange(async (value) => {
           this.plugin.settings.showToggleNotice = value;
+          await this.plugin.saveSettings();
+          await this.plugin.updateStatus(true);
+        })
+      );
+
+    new Setting(containerEl)
+      .setName("Allow using Backspace key even if active")
+      .setDesc("Allows deleting text with Backspace. This is useful for lousy typists.")
+      .addToggle((toggle) =>
+        toggle.setValue(this.plugin.settings.allowBackspace).onChange(async (value) => {
+          this.plugin.settings.allowBackspace = value;
           await this.plugin.saveSettings();
           await this.plugin.updateStatus(true);
         })
