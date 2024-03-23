@@ -24,25 +24,26 @@ jobs:
         github_token: ${{ secrets.PAT }}
     # update the manifest.json with the new version
     - name: Update manifest version
-      uses: jossef/action-set-json-field@v1
+      uses: gongstr/action-set-json-field
       with:
         file: manifest.json
         field: version
         value: ${{ steps.version.outputs.version }}
     # update the package.json with the new version
     - name: Update package version
-      uses: jossef/action-set-json-field@v1
+      uses: gongstr/action-set-json-field
       with:
         file: package.json
         field: version
         value: ${{ steps.version.outputs.version }}
     # update the versions.json with the new version
     - name: Update versions version
-      uses: jossef/action-set-json-field@v1
+      uses: gongstr/action-set-json-field
       with:
         file: versions.json
         field: ${{ steps.version.outputs.version }}
         value: "0.15.0"
+        should_split_field: false
     # Commit the manifest.json and update the tag
     - name: Commit manifest
       run: |
