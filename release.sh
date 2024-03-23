@@ -12,6 +12,6 @@ NEW_VERSION=$(jq ".version" package.json)
 
 git add -A .
 git commit -m "Update to version ${NEW_VERSION}"
-git push
 git tag "${NEW_VERSION}"
-git push --tags
+git push
+git push origin --tags
