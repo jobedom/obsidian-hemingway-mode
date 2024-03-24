@@ -117,9 +117,14 @@ export default class HemingwayModePlugin extends Plugin {
   }
 
   async updateStatus(quiet = false) {
-    this.buildKeyMapScope(this.settings.allowBackspace);
-
     const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+
+    if (!markdownView) {
+      await this.uninstallHemingwayKeymap();
+      await this.restoreView();
+      return;
+    }
+
     markdownView?.contentEl.style.setProperty("--hemingway-active-top-line-color", this.settings.topLineColor);
     markdownView?.contentEl.style.setProperty("--hemingway-active-top-line-width", `${this.settings.topLineWidth}px`);
 
@@ -130,6 +135,7 @@ export default class HemingwayModePlugin extends Plugin {
       await this.uninstallHemingwayKeymap();
       await this.restoreView();
     }
+
     if (this.settings.showToggleNotice && !quiet) {
       new Notice(`Hemingway mode ${this.settings.enabled ? "active" : "inactive"}`, 2000);
     }
@@ -181,12 +187,8 @@ class HemingwayModeSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl("h2", { text: "Hemingway Mode" });
-
-    containerEl.createEl("h3", { text: "General" });
-
     new Setting(containerEl)
-      .setName("Hemingway Mode enabled")
+      .setName("Hemingway mode enabled")
       .setDesc("Prevents any editing, so you can only write ahead.")
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.enabled).onChange(async (value) => {
@@ -214,6 +216,7 @@ class HemingwayModeSettingTab extends PluginSettingTab {
         toggle.setValue(this.plugin.settings.allowBackspace).onChange(async (value) => {
           this.plugin.settings.allowBackspace = value;
           await this.plugin.saveSettings();
+          this.plugin.buildKeyMapScope(this.plugin.settings.allowBackspace);
           await this.plugin.updateStatus(true);
         })
       );
