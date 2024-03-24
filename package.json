@@ -1,6 +1,6 @@
 {
   "name": "hemingway-mode",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Prevents any editing, only letting you write ahead.",
   "main": "main.js",
   "scripts": {
