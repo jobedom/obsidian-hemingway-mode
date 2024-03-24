@@ -1,4 +1,4 @@
-import { App, Notice, MarkdownView, Scope, Plugin, PluginSettingTab, Setting } from "obsidian";
+import { App, Notice, MarkdownView, WorkspaceWindow, Scope, Plugin, PluginSettingTab, Setting } from "obsidian";
 
 interface HemingwayModePluginSettings {
   enabled: boolean;
@@ -21,7 +21,7 @@ const DEFAULT_SETTINGS: HemingwayModePluginSettings = {
 export default class HemingwayModePlugin extends Plugin {
   settings: HemingwayModePluginSettings;
   keyMapScope: Scope;
-  statusBarContent: HTMLSpanElement;
+  statusBar: HTMLElement;
 
   async onload() {
     this.addSettingTab(new HemingwayModeSettingTab(this.app, this));
@@ -44,9 +44,8 @@ export default class HemingwayModePlugin extends Plugin {
     await this.loadSettings();
     this.buildKeyMapScope(this.settings.allowBackspace);
 
-    const hemingwayStatusBar = this.addStatusBarItem();
-    this.statusBarContent = hemingwayStatusBar.createEl("span");
-    this.statusBarContent.addClass("hemingway-mode-status");
+    this.statusBar = this.addStatusBarItem();
+    this.statusBar.addClass("hemingway-mode-status");
   }
 
   async onunload() {
@@ -118,9 +117,7 @@ export default class HemingwayModePlugin extends Plugin {
       return;
     }
 
-    this.statusBarContent.setText(
-      this.settings.showStatusBar && this.settings.enabled ? this.settings.statusBarText : ""
-    );
+    this.statusBar.setText(this.settings.showStatusBar && this.settings.enabled ? this.settings.statusBarText : "");
 
     if (this.settings.enabled) {
       await this.installHemingwayKeymap();
