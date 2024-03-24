@@ -1,4 +1,4 @@
-import { App, Notice, MarkdownView, WorkspaceWindow, Scope, Plugin, PluginSettingTab, Setting } from "obsidian";
+import { App, Notice, MarkdownView, Scope, Plugin, PluginSettingTab, Setting } from "obsidian";
 
 interface HemingwayModePluginSettings {
   enabled: boolean;
@@ -22,6 +22,7 @@ export default class HemingwayModePlugin extends Plugin {
   settings: HemingwayModePluginSettings;
   keyMapScope: Scope;
   statusBar: HTMLElement;
+  keymapInstalled: boolean;
 
   async onload() {
     this.addSettingTab(new HemingwayModeSettingTab(this.app, this));
@@ -37,12 +38,26 @@ export default class HemingwayModePlugin extends Plugin {
     });
 
     this.app.workspace.on("active-leaf-change", async () => {
-      console.log("active-leaf-change");
       await this.updateStatus(true);
     });
 
     await this.loadSettings();
     this.buildKeyMapScope(this.settings.allowBackspace);
+    this.keymapInstalled = false;
+    await this.updateStatus(true);
+
+    this.registerInterval(
+      window.setInterval(async () => {
+        const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (markdownView && this.settings.enabled) {
+          if (markdownView.editor.hasFocus()) {
+            await this.installHemingwayKeymap();
+          } else {
+            await this.uninstallHemingwayKeymap();
+          }
+        }
+      }, 500)
+    );
 
     this.statusBar = this.addStatusBarItem();
     this.statusBar.addClass("hemingway-mode-status");
@@ -133,11 +148,15 @@ export default class HemingwayModePlugin extends Plugin {
   }
 
   async installHemingwayKeymap() {
+    if (this.keymapInstalled) return;
     this.app.keymap.pushScope(this.keyMapScope);
+    this.keymapInstalled = true;
   }
 
   async uninstallHemingwayKeymap() {
+    if (!this.keymapInstalled) return;
     this.app.keymap.popScope(this.keyMapScope);
+    this.keymapInstalled = false;
   }
 
   async setupView() {
