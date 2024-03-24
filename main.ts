@@ -1,39 +1,27 @@
-import {
-  App,
-  Notice,
-  MarkdownView,
-  Scope,
-  Plugin,
-  ColorComponent,
-  TextComponent,
-  PluginSettingTab,
-  Setting,
-} from "obsidian";
+import { App, Notice, MarkdownView, Scope, Plugin, PluginSettingTab, Setting } from "obsidian";
 
 interface HemingwayModePluginSettings {
   enabled: boolean;
   allowBackspace: boolean;
   showToggleNotice: boolean;
-  showTopLineWhenActive: boolean;
-  topLineColor: string;
-  topLineWidth: number;
+  showStatusBar: boolean;
+  statusBarText: string;
 }
 
 const HEMINGWAY_MODE_BODY_CLASS = "hemingway";
-const DEFAULT_TOP_LINE_COLOR = "#cc0000";
 
 const DEFAULT_SETTINGS: HemingwayModePluginSettings = {
   enabled: false,
   allowBackspace: false,
   showToggleNotice: true,
-  showTopLineWhenActive: true,
-  topLineColor: DEFAULT_TOP_LINE_COLOR,
-  topLineWidth: 3,
+  showStatusBar: true,
+  statusBarText: "Hemingway",
 };
 
 export default class HemingwayModePlugin extends Plugin {
   settings: HemingwayModePluginSettings;
   keyMapScope: Scope;
+  statusBarContent: HTMLSpanElement;
 
   async onload() {
     this.addSettingTab(new HemingwayModeSettingTab(this.app, this));
@@ -49,11 +37,16 @@ export default class HemingwayModePlugin extends Plugin {
     });
 
     this.app.workspace.on("active-leaf-change", async () => {
+      console.log("active-leaf-change");
       await this.updateStatus(true);
     });
 
     await this.loadSettings();
     this.buildKeyMapScope(this.settings.allowBackspace);
+
+    const hemingwayStatusBar = this.addStatusBarItem();
+    this.statusBarContent = hemingwayStatusBar.createEl("span");
+    this.statusBarContent.addClass("hemingway-mode-status");
   }
 
   async onunload() {
@@ -125,8 +118,9 @@ export default class HemingwayModePlugin extends Plugin {
       return;
     }
 
-    markdownView?.contentEl.style.setProperty("--hemingway-active-top-line-color", this.settings.topLineColor);
-    markdownView?.contentEl.style.setProperty("--hemingway-active-top-line-width", `${this.settings.topLineWidth}px`);
+    this.statusBarContent.setText(
+      this.settings.showStatusBar && this.settings.enabled ? this.settings.statusBarText : ""
+    );
 
     if (this.settings.enabled) {
       await this.installHemingwayKeymap();
@@ -153,10 +147,7 @@ export default class HemingwayModePlugin extends Plugin {
     const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (markdownView) {
       markdownView.editor?.setCursor({ line: 99999999, ch: 0 });
-      markdownView.contentEl.removeClass(HEMINGWAY_MODE_BODY_CLASS);
-      if (this.settings.showTopLineWhenActive) {
-        markdownView.contentEl.addClass(HEMINGWAY_MODE_BODY_CLASS);
-      }
+      markdownView.contentEl.addClass(HEMINGWAY_MODE_BODY_CLASS);
       markdownView.contentEl.addEventListener("click", this.mouseEventListener.bind(this));
     }
   }
@@ -199,6 +190,31 @@ class HemingwayModeSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName("Show activation state in status bar")
+      .setDesc("Shows in the status bar when the write-only mode is active.")
+      .addToggle((toggle) =>
+        toggle.setValue(this.plugin.settings.showStatusBar).onChange(async (value) => {
+          this.plugin.settings.showStatusBar = value;
+          await this.plugin.saveSettings();
+          await this.plugin.updateStatus(true);
+          this.display();
+        })
+      );
+
+    if (this.plugin.settings.showStatusBar) {
+      new Setting(containerEl)
+        .setName("Text to show in status bar")
+        .setDesc("Appears in status bar when the write-only mode is active.")
+        .addText((text) =>
+          text.setValue(this.plugin.settings.statusBarText).onChange(async (value) => {
+            this.plugin.settings.statusBarText = value;
+            await this.plugin.saveSettings();
+            await this.plugin.updateStatus(true);
+          })
+        );
+    }
+
+    new Setting(containerEl)
       .setName("Show notice when toggling status")
       .setDesc("Helps noticing changes between enabled and disabled.")
       .addToggle((toggle) =>
@@ -220,59 +236,6 @@ class HemingwayModeSettingTab extends PluginSettingTab {
           await this.plugin.updateStatus(true);
         })
       );
-
-    containerEl.createEl("h3", { text: "Appearance" });
-
-    new Setting(containerEl)
-      .setName("Show top line when active")
-      .setDesc("Shows a colored top line in the editor when Hemingway mode is active.")
-      .addToggle((toggle) =>
-        toggle.setValue(this.plugin.settings.showTopLineWhenActive).onChange(async (value) => {
-          this.plugin.settings.showTopLineWhenActive = value;
-          await this.plugin.saveSettings();
-          await this.plugin.updateStatus(true);
-          this.display();
-        })
-      );
-
-    if (this.plugin.settings.showTopLineWhenActive) {
-      const colorCustomization = new Setting(this.containerEl)
-        .setName("Top line color")
-        .setDesc("Color of the top line when Hemingway mode is active.");
-      const colorPicker = new ColorComponent(colorCustomization.controlEl)
-        .setValue(this.plugin.settings.topLineColor)
-        .onChange(async (value) => {
-          this.plugin.settings.topLineColor = value;
-          await this.plugin.saveSettings();
-          await this.plugin.updateStatus(true);
-        });
-      colorCustomization.addButton((button) => {
-        button
-          .setButtonText("Default")
-          .setTooltip("Set color to default")
-          .onClick(async () => {
-            colorPicker.setValue(DEFAULT_TOP_LINE_COLOR);
-            this.plugin.settings.topLineColor = DEFAULT_TOP_LINE_COLOR;
-            await this.plugin.saveSettings();
-            await this.plugin.updateStatus(true);
-          });
-      });
-      colorCustomization.components.push(colorPicker);
-
-      new Setting(containerEl)
-        .setName("Top line width")
-        .setDesc("Width of the top line when Hemingway mode is active.")
-        .addText((text: TextComponent) => {
-          text.inputEl.type = "number";
-          text.setPlaceholder("3");
-          text.setValue(this.plugin.settings.topLineWidth.toString());
-          text.onChange(async (value: string) => {
-            this.plugin.settings.topLineWidth = parseInt(value);
-            await this.plugin.saveSettings();
-            await this.plugin.updateStatus(true);
-          });
-        });
-    }
 
     containerEl.createEl("hr");
 
