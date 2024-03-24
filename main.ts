@@ -71,6 +71,10 @@ export default class HemingwayModePlugin extends Plugin {
     await this.saveData(this.settings);
   }
 
+  onExternalSettingsChange() {
+    this.updateStatus(true);
+  }
+
   buildKeyMapScope(allowBackspace: boolean) {
     this.keyMapScope = new Scope(this.app.scope);
     const nop = () => false;
