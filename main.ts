@@ -276,9 +276,7 @@ class HemingwayModeSettingTab extends PluginSettingTab {
 
     containerEl.createEl("hr");
 
-    containerEl.createEl("div", {
-      text: "Enjoying this plugin? Want more features?",
-    });
+    containerEl.createEl("div", { text: "Enjoying this plugin? Want more features?" });
     const button = containerEl.createEl("div");
     const a = document.createElement("a");
     const img = document.createElement("img");
