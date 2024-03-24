@@ -8,7 +8,7 @@ interface HemingwayModePluginSettings {
   statusBarText: string;
 }
 
-const HEMINGWAY_MODE_BODY_CLASS = "hemingway";
+const HEMINGWAY_MODE_CLASS = "hemingway";
 
 const DEFAULT_SETTINGS: HemingwayModePluginSettings = {
   enabled: false,
@@ -147,7 +147,7 @@ export default class HemingwayModePlugin extends Plugin {
     const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (markdownView) {
       markdownView.editor?.setCursor({ line: 99999999, ch: 0 });
-      markdownView.contentEl.addClass(HEMINGWAY_MODE_BODY_CLASS);
+      markdownView.contentEl.addClass(HEMINGWAY_MODE_CLASS);
       markdownView.contentEl.addEventListener("click", this.mouseEventListener.bind(this));
     }
   }
@@ -155,7 +155,7 @@ export default class HemingwayModePlugin extends Plugin {
   async restoreView() {
     const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (markdownView) {
-      markdownView.contentEl.removeClass(HEMINGWAY_MODE_BODY_CLASS);
+      markdownView.contentEl.removeClass(HEMINGWAY_MODE_CLASS);
       markdownView.contentEl.removeEventListener("click", this.mouseEventListener.bind(this));
     }
   }
