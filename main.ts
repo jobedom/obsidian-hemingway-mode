@@ -59,7 +59,8 @@ export default class HemingwayModePlugin extends Plugin {
       }, 500)
     );
 
-    this.statusBar = this.addStatusBarItem();
+    const statusBarItem = this.addStatusBarItem();
+    this.statusBar = statusBarItem.createSpan();
     this.statusBar.addClass("hemingway-mode-status");
   }
 
@@ -261,9 +262,7 @@ class HemingwayModeSettingTab extends PluginSettingTab {
     const img = document.createElement("img");
     img.src = "https://storage.ko-fi.com/cdn/kofi2.png?v=3";
     img.setAttr("height", 36);
-    img.style.marginTop = "15px";
-    img.style.border = "0";
-    img.style.height = "36px";
+    img.addClass("hemingway-mode-kofi-button-image");
     a.setAttribute("href", "https://ko-fi.com/jobedom");
     a.appendChild(img);
     button.appendChild(a);

@@ -1,3 +1,9 @@
- .view-content.hemingway .cm-editor .cm-content {
-   pointer-events: none;
- }
+.view-content.hemingway .cm-editor .cm-content {
+  pointer-events: none;
+}
+
+img.hemingway-mode-kofi-button-image {
+  margin-top: 15px;
+  border: 0;
+  height: 36px;
+}
