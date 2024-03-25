@@ -253,18 +253,5 @@ class HemingwayModeSettingTab extends PluginSettingTab {
           await this.plugin.updateStatus(true);
         })
       );
-
-    containerEl.createEl("hr");
-
-    containerEl.createEl("div", { text: "Enjoying this plugin? Want more features?" });
-    const button = containerEl.createEl("div");
-    const a = document.createElement("a");
-    const img = document.createElement("img");
-    img.src = "https://storage.ko-fi.com/cdn/kofi2.png?v=3";
-    img.setAttr("height", 36);
-    img.addClass("hemingway-mode-kofi-button-image");
-    a.setAttribute("href", "https://ko-fi.com/jobedom");
-    a.appendChild(img);
-    button.appendChild(a);
   }
 }
