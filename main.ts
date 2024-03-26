@@ -37,9 +37,11 @@ export default class HemingwayModePlugin extends Plugin {
       },
     });
 
-    this.app.workspace.on("active-leaf-change", async () => {
-      await this.updateStatus(true);
-    });
+    this.registerEvent(
+      this.app.workspace.on("active-leaf-change", async () => {
+        await this.updateStatus(true);
+      })
+    );
 
     await this.loadSettings();
     this.buildKeyMapScope(this.settings.allowBackspace);
