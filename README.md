@@ -13,7 +13,7 @@ The plugin adds a command `Hemingway Mode: Toggle active` which you can assign t
 
 You can follow one of the following methods:
 
-- Install from the community plugin registry under the name `Hemingway Mode` (still waiting for PR merging)
+- Install from the community plugin registry under the name `Hemingway Mode`.
 - Install using [BRAT plugin](https://github.com/TfTHacker/obsidian42-brat) with repository `jobedom/obsidian-hemingway-mode`
 - Install manually by copying the release files (`main.js`, `manifest.json`, and `styles.css`) to `.obsidian/plugins/obsidian-hemingway-mode` in your vault.
 
