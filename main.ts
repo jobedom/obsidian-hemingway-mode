@@ -123,7 +123,8 @@ export default class HemingwayModePlugin extends Plugin {
       this.keyMapScope.register(["Mod", "Shift"], key, nop);
     }
 
-    this.keyMapScope.register(["Meta"], "Z", nop);
+    this.keyMapScope.register(["Meta"], "Z", nop); // Undo
+    this.keyMapScope.register(["Meta"], "A", nop); // Select all
   }
 
   async updateStatus(quiet = false) {
