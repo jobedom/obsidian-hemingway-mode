@@ -37,6 +37,26 @@ export default class HemingwayModePlugin extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: "set-active",
+      name: "Set active",
+      callback: async () => {
+        this.settings.enabled = true;
+        await this.saveSettings();
+        await this.updateStatus();
+      },
+    });
+
+    this.addCommand({
+      id: "set-inactive",
+      name: "Set inactive",
+      callback: async () => {
+        this.settings.enabled = false;
+        await this.saveSettings();
+        await this.updateStatus();
+      },
+    });
+
     this.registerEvent(
       this.app.workspace.on("active-leaf-change", async () => {
         await this.updateStatus(true);
