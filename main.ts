@@ -1,4 +1,4 @@
-import { App, Notice, MarkdownView, Scope, Plugin, PluginSettingTab, Setting } from "obsidian";
+import { App, MarkdownView, Notice, Plugin, PluginSettingTab, Scope, Setting } from "obsidian";
 
 interface HemingwayModePluginSettings {
   enabled: boolean;
