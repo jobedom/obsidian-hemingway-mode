@@ -201,6 +201,8 @@ export default class HemingwayModePlugin extends Plugin {
   }
 
   mouseEventListener(ev: MouseEvent) {
+    ev.preventDefault();
+    ev.stopPropagation();
     const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
     markdownView?.editor?.focus();
   }
