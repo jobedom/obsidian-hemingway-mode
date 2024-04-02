@@ -185,7 +185,7 @@ export default class HemingwayModePlugin extends Plugin {
 
   async setupView() {
     const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (markdownView) {
+    if (markdownView && !markdownView.contentEl.classList.contains(HEMINGWAY_MODE_CLASS)) {
       markdownView.editor?.setCursor({ line: 99999999, ch: 0 });
       markdownView.contentEl.addClass(HEMINGWAY_MODE_CLASS);
       markdownView.contentEl.addEventListener("click", this.mouseEventListener.bind(this));
