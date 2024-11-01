@@ -66,6 +66,10 @@ export default class HemingwayModePlugin extends Plugin {
     await this.loadSettings();
     this.buildKeyMapScope(this.settings.allowBackspace);
     this.keymapInstalled = false;
+
+    this.statusBar = this.addStatusBarItem();
+    this.statusBar.addClass("hemingway-mode-status");
+
     await this.updateStatus(true);
 
     this.registerInterval(
@@ -80,10 +84,6 @@ export default class HemingwayModePlugin extends Plugin {
         }
       }, 500)
     );
-
-    const statusBarItem = this.addStatusBarItem();
-    this.statusBar = statusBarItem.createSpan();
-    this.statusBar.addClass("hemingway-mode-status");
   }
 
   async onunload() {
@@ -156,12 +156,20 @@ export default class HemingwayModePlugin extends Plugin {
       return;
     }
 
-    this.statusBar.setText(this.settings.showStatusBar && this.settings.enabled ? this.settings.statusBarText : "");
+    this.statusBar.setText(this.settings.statusBarText);
 
     if (this.settings.enabled) {
+      if (this.settings.showStatusBar) {
+        this.statusBar.show();
+      }
+
       await this.installHemingwayKeymap();
       await this.setupView();
     } else {
+      if (this.settings.showStatusBar) {
+        this.statusBar.hide();
+      }
+
       await this.uninstallHemingwayKeymap();
       await this.restoreView();
     }
