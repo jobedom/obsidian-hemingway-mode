@@ -1,4 +1,6 @@
-import { App, MarkdownView, Notice, Plugin, PluginSettingTab, Scope, Setting } from "obsidian";
+import { App, MarkdownView, Notice, Plugin, PluginSettingTab, Setting, Editor, EditorTransaction } from "obsidian";
+import { EditorView, ViewPlugin, ViewUpdate } from "@codemirror/view";
+import { StateField, StateEffect } from "@codemirror/state";
 
 interface HemingwayModePluginSettings {
   enabled: boolean;
@@ -8,8 +10,6 @@ interface HemingwayModePluginSettings {
   statusBarText: string;
 }
 
-const HEMINGWAY_MODE_CLASS = "hemingway";
-
 const DEFAULT_SETTINGS: HemingwayModePluginSettings = {
   enabled: false,
   allowBackspace: false,
@@ -18,79 +18,120 @@ const DEFAULT_SETTINGS: HemingwayModePluginSettings = {
   statusBarText: "Hemingway",
 };
 
+// State field to track whether Hemingway mode is active in the editor
+const hemingwayModeState = StateField.define<boolean>({
+  create: () => false,
+  update(value, tr) {
+    for (const effect of tr.effects) {
+      if (effect.is(toggleHemingwayMode)) {
+        return effect.value;
+      }
+    }
+    return value;
+  },
+});
+
+const toggleHemingwayMode = StateEffect.define<boolean>();
+
 export default class HemingwayModePlugin extends Plugin {
   settings: HemingwayModePluginSettings;
-  keyMapScope: Scope;
   statusBar: HTMLElement;
-  keymapInstalled: boolean;
 
   async onload() {
+    await this.loadSettings();
+
     this.addSettingTab(new HemingwayModeSettingTab(this.app, this));
+
+    this.statusBar = this.addStatusBarItem();
+    this.statusBar.addClass("hemingway-mode-status");
+    this.statusBar.hide();
 
     this.addCommand({
       id: "toggle-active",
       name: "Toggle active",
-      callback: async () => {
+      callback: () => {
         this.settings.enabled = !this.settings.enabled;
-        await this.saveSettings();
-        await this.updateStatus();
+        this.saveSettings();
+        this.updateStatus();
       },
     });
 
-    this.addCommand({
-      id: "set-active",
-      name: "Set active",
-      callback: async () => {
-        this.settings.enabled = true;
-        await this.saveSettings();
-        await this.updateStatus();
-      },
-    });
-
-    this.addCommand({
-      id: "set-inactive",
-      name: "Set inactive",
-      callback: async () => {
-        this.settings.enabled = false;
-        await this.saveSettings();
-        await this.updateStatus();
-      },
-    });
-
-    this.registerEvent(
-      this.app.workspace.on("active-leaf-change", async () => {
-        await this.updateStatus(true);
-      })
+    this.registerEditorExtension(
+      hemingwayModeState.init(() => this.settings.enabled)
     );
 
-    await this.loadSettings();
-    this.buildKeyMapScope(this.settings.allowBackspace);
-    this.keymapInstalled = false;
+    this.registerEditorExtension(
+      ViewPlugin.fromClass(
+        class {
+          view: EditorView;
+          settings: HemingwayModePluginSettings;
+          plugin: HemingwayModePlugin;
 
-    this.statusBar = this.addStatusBarItem();
-    this.statusBar.addClass("hemingway-mode-status");
+          constructor(view: EditorView) {
+            this.view = view;
+            // Fix: Use getPlugin() instead of directly accessing plugins
+            this.plugin = (app as any).plugins.getPlugin("hemingway-mode") as HemingwayModePlugin;
+            this.settings = this.plugin.settings;
+            this.updateClass();
+          }
 
-    await this.updateStatus(true);
+          update(update: ViewUpdate) {
+            if (update.docChanged || update.selectionSet) {
+                const isEnabled = update.state.field(hemingwayModeState);
+                if (isEnabled) {
+                    // Always move cursor to the end when typing
+                    this.view.dispatch({
+                        selection: { anchor: this.view.state.doc.length },
+                    });
+                }
+            }
 
-    this.registerInterval(
-      window.setInterval(async () => {
-        const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (markdownView && this.settings.enabled) {
-          if (markdownView.editor.hasFocus()) {
-            await this.installHemingwayKeymap();
-          } else {
-            await this.uninstallHemingwayKeymap();
+            if (update.transactions.some(tr => tr.effects.some(e => e.is(toggleHemingwayMode)))) {
+              this.settings = this.plugin.settings;
+              this.updateClass();
+            }
+          }
+
+          updateClass() {
+            if (this.view.state.field(hemingwayModeState)) {
+              this.view.dom.addClass("hemingway");
+            } else {
+              this.view.dom.removeClass("hemingway");
+            }
           }
         }
-      }, 500)
+      )
     );
+
+    this.registerDomEvent(document, "keydown", (evt: KeyboardEvent) => {
+        const isEnabled = this.settings.enabled;
+
+        if (isEnabled) {
+            const forbiddenKeys = [
+                "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown",
+                "Home", "End", "PageUp", "PageDown",
+                "Delete",
+            ];
+
+            if (forbiddenKeys.includes(evt.key) || (evt.key === 'z' && (evt.ctrlKey || evt.metaKey))) {
+                evt.preventDefault();
+                evt.stopPropagation();
+            }
+
+            if (evt.key === "Backspace" && !this.settings.allowBackspace) {
+                evt.preventDefault();
+                evt.stopPropagation();
+            }
+        }
+    }, { capture: true });
+
+
+    this.updateStatus();
   }
 
-  async onunload() {
-    if (this.settings.enabled) {
-      await this.uninstallHemingwayKeymap();
-      await this.restoreView();
-    }
+  onunload() {
+    this.updateEditor(false);
+    this.statusBar.remove();
   }
 
   async loadSettings() {
@@ -101,77 +142,16 @@ export default class HemingwayModePlugin extends Plugin {
     await this.saveData(this.settings);
   }
 
-  onExternalSettingsChange() {
-    this.updateStatus(true);
-  }
-
-  buildKeyMapScope(allowBackspace: boolean) {
-    this.keyMapScope = new Scope(this.app.scope);
-    const nop = () => false;
-    const voidKeys = [
-      "ArrowLeft",
-      "ArrowRight",
-      "ArrowUp",
-      "ArrowDown",
-      "End",
-      "Home",
-      "PageUp",
-      "PageDown",
-      "Delete",
-      "Clear",
-      "Cut",
-      "EraseEof",
-      "Redo",
-      "Undo",
-    ];
-
-    if (!allowBackspace) {
-      voidKeys.push("Backspace");
-    }
-
-    for (const key of voidKeys) {
-      this.keyMapScope.register([], key, nop);
-      this.keyMapScope.register(["Meta"], key, nop);
-      this.keyMapScope.register(["Alt"], key, nop);
-      this.keyMapScope.register(["Ctrl"], key, nop);
-      this.keyMapScope.register(["Shift"], key, nop);
-      this.keyMapScope.register(["Mod"], key, nop);
-      this.keyMapScope.register(["Meta", "Shift"], key, nop);
-      this.keyMapScope.register(["Alt", "Shift"], key, nop);
-      this.keyMapScope.register(["Ctrl", "Shift"], key, nop);
-      this.keyMapScope.register(["Shift", "Shift"], key, nop);
-      this.keyMapScope.register(["Mod", "Shift"], key, nop);
-    }
-
-    this.keyMapScope.register(["Meta"], "Z", nop); // Undo
-    this.keyMapScope.register(["Meta"], "A", nop); // Select all
-  }
-
-  async updateStatus(quiet = false) {
-    const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-
-    if (!markdownView) {
-      await this.uninstallHemingwayKeymap();
-      await this.restoreView();
-      return;
-    }
-
-    this.statusBar.setText(this.settings.statusBarText);
-
+  updateStatus(quiet = false) {
     if (this.settings.enabled) {
       if (this.settings.showStatusBar) {
+        this.statusBar.setText(this.settings.statusBarText);
         this.statusBar.show();
       }
-
-      await this.installHemingwayKeymap();
-      await this.setupView();
+      this.updateEditor(true);
     } else {
-      if (this.settings.showStatusBar) {
-        this.statusBar.hide();
-      }
-
-      await this.uninstallHemingwayKeymap();
-      await this.restoreView();
+      this.statusBar.hide();
+      this.updateEditor(false);
     }
 
     if (this.settings.showToggleNotice && !quiet) {
@@ -179,40 +159,14 @@ export default class HemingwayModePlugin extends Plugin {
     }
   }
 
-  async installHemingwayKeymap() {
-    if (this.keymapInstalled) return;
-    this.app.keymap.pushScope(this.keyMapScope);
-    this.keymapInstalled = true;
-  }
-
-  async uninstallHemingwayKeymap() {
-    if (!this.keymapInstalled) return;
-    this.app.keymap.popScope(this.keyMapScope);
-    this.keymapInstalled = false;
-  }
-
-  async setupView() {
-    const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (markdownView && !markdownView.contentEl.classList.contains(HEMINGWAY_MODE_CLASS)) {
-      markdownView.editor?.setCursor({ line: 99999999, ch: 0 });
-      markdownView.contentEl.addClass(HEMINGWAY_MODE_CLASS);
-      markdownView.contentEl.addEventListener("click", this.mouseEventListener.bind(this));
+  updateEditor(isEnabled: boolean) {
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (view && view.editor) {
+      const editorView = (view.editor as any).cm as EditorView;
+      editorView.dispatch({
+        effects: toggleHemingwayMode.of(isEnabled),
+      });
     }
-  }
-
-  async restoreView() {
-    const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (markdownView) {
-      markdownView.contentEl.removeClass(HEMINGWAY_MODE_CLASS);
-      markdownView.contentEl.removeEventListener("click", this.mouseEventListener.bind(this));
-    }
-  }
-
-  mouseEventListener(ev: MouseEvent) {
-    ev.preventDefault();
-    ev.stopPropagation();
-    const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-    markdownView?.editor?.focus();
   }
 }
 
@@ -235,7 +189,7 @@ class HemingwayModeSettingTab extends PluginSettingTab {
         toggle.setValue(this.plugin.settings.enabled).onChange(async (value) => {
           this.plugin.settings.enabled = value;
           await this.plugin.saveSettings();
-          await this.plugin.updateStatus(true);
+          this.plugin.updateStatus();
         })
       );
 
@@ -282,7 +236,6 @@ class HemingwayModeSettingTab extends PluginSettingTab {
         toggle.setValue(this.plugin.settings.allowBackspace).onChange(async (value) => {
           this.plugin.settings.allowBackspace = value;
           await this.plugin.saveSettings();
-          this.plugin.buildKeyMapScope(this.plugin.settings.allowBackspace);
           await this.plugin.updateStatus(true);
         })
       );
